@@ -3,10 +3,12 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, Keyboar
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
 from datetime import time
 import pytz
-import os  # <--- NUOVO: Importa il modulo OS
-import sys # <--- NUOVO: Necessario se vogliamo uscire in caso di errore
-from dotenv import load_dotenv # <--- NUOVA RIGA: Importa la funzione di caricamento
-load_dotenv() # <--- NUOVA RIGA: Carica le variabili dal file .env (se esiste)
+import os
+import sys
+from dotenv import load_dotenv
+
+# Carica le variabili (utile per il testing locale, Railway usa le sue variabili)
+load_dotenv()
 
 # Configurazione di base e log
 # --------------------------------------------------------------------------
@@ -17,16 +19,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# 1. PARAMETRI ESSENZIALI (Ora letti dalle Variabili d'Ambiente)
+# 1. PARAMETRI ESSENZIALI (Lettura dalle Variabili d'Ambiente)
 # --------------------------------------------------------------------------
-# Legge il token dalla variabile d'ambiente 'TELEGRAM_TOKEN'
-TOKEN = os.environ.get('TELEGRAM_TOKEN')  # <--- MODIFICATO
-# Legge l'ID Admin dalla variabile d'ambiente 'ADMIN_ID'
-ADMIN_ID_STR = os.environ.get('ADMIN_ID') # <--- MODIFICATO
+TOKEN = os.environ.get('TELEGRAM_TOKEN')
+ADMIN_ID_STR = os.environ.get('ADMIN_ID')
 
-CHAT_ID_CANALE = -1002702418249  # ID del canale @basilicataGo
+# ID del canale @basilicataGo
+CHAT_ID_CANALE = -1002702418249
 
-# Conversione di ADMIN_ID da stringa a intero (necessario per confronto)
+# Conversione di ADMIN_ID da stringa a intero
 try:
     if ADMIN_ID_STR:
         ADMIN_ID = int(ADMIN_ID_STR)
@@ -40,7 +41,7 @@ except ValueError:
 # Controllo preliminare del token e admin ID
 if not TOKEN:
     logger.error("ERRORE CRITICO: Variabile d'ambiente TELEGRAM_TOKEN non trovata. Uscita.")
-    sys.exit(1) # Esce dal programma se il token non c'è
+    sys.exit(1)
 
 if not ADMIN_ID:
     logger.warning("ATTENZIONE: Variabile d'ambiente ADMIN_ID non trovata o non valida. I comandi admin non funzioneranno.")
@@ -144,21 +145,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Avvia il bot e mostra il pulsante per aprire il menu."""
     chat_id = update.effective_chat.id
     
-    # Cancella il messaggio del comando /start
-    try:
-        await update.message.delete()
-    except Exception as e:
-        logger.warning(f"Impossibile eliminare /start: {e}")
-    
-    # Messaggio di benvenuto con il pulsante permanente
+    # MODIFICA: Invece di cancellare il messaggio, inviamo la risposta con la tastiera
     welcome_text = (
         "🏛️ **Benvenuto su BasilicataGo!**\n\n"
         "Il tuo assistente per servizi, orari e informazioni sulla Basilicata.\n\n"
         "👇 Premi il pulsante qui sotto per aprire il menu principale."
     )
     
-    await context.bot.send_message(
-        chat_id=chat_id,
+    await update.message.reply_text( # Uso reply_text invece di send_message per un flusso più pulito
         text=welcome_text,
         reply_markup=get_reply_keyboard(),
         parse_mode='Markdown'
@@ -202,7 +196,6 @@ async def pubblica_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.message.reply_text("❌ Non hai i permessi per usare questo comando.")
         return
     
-    # MODIFICA: Messaggio semplificato senza Markdown
     messaggio = (
         "📢 Novità su BasilicataGo!\n\n"
         "Scopri tutti i servizi disponibili tramite il nostro bot:\n"
@@ -221,7 +214,6 @@ async def pubblica_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             chat_id=CHAT_ID_CANALE,
             text=messaggio,
             reply_markup=InlineKeyboardMarkup(keyboard)
-            # MODIFICA: Rimosso parse_mode='Markdown'
         )
         await update.message.reply_text("✅ Messaggio con pulsante bot pubblicato!")
     except Exception as e:
@@ -306,15 +298,10 @@ async def help_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 async def handle_menu_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Gestisce il click sul pulsante 'Apri Menu'."""
     
-    try:
-        await update.message.delete()
-    except Exception:
-        pass
-    
+    # MODIFICA: Usiamo reply_text e non delete, più robusto
     menu_text = "🏛️ **Menu BasilicataGo**\n\nSeleziona un'opzione:"
     
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
+    await update.message.reply_text(
         text=menu_text,
         reply_markup=get_main_menu_keyboard(),
         parse_mode='Markdown'
@@ -322,7 +309,7 @@ async def handle_menu_button(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 # --------------------------------------------------------------------------
-# 8. HANDLER PER CANCELLARE ALTRI MESSAGGI
+# 8. HANDLER PER CANCELLARE ALTRI MESSAGGI (Lasciato invariato)
 # --------------------------------------------------------------------------
 
 async def handle_other_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -334,7 +321,7 @@ async def handle_other_messages(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 # --------------------------------------------------------------------------
-# 9. HANDLER PER LA GESTIONE DEI PULSANTI INLINE
+# 9. HANDLER PER LA GESTIONE DEI PULSANTI INLINE (Lasciato invariato)
 # --------------------------------------------------------------------------
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -434,7 +421,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     # --- SOTTOMENU BASILICATA TURISMO ---
     elif data == 'MENU_TURISMO':
         pulsanti_turismo = [
-            [InlineKeyboardButton("🌊 Bio del Fico", callback_data='LINK_BIODELFICO')],
+            [InlineKeyboardButton("🌊 BiodelFico", callback_data='LINK_BIODELFICO')],
             [InlineKeyboardButton("🏛️ Basilicata Turistica", callback_data='LINK_BASILICATATURISTICA')],
             [InlineKeyboardButton("⬅️ Indietro", callback_data='MOSTRA_SITI_UTILI')]
         ]
@@ -548,7 +535,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 def main() -> None:
     """Avvia il bot con pubblicazioni automatiche."""
-    # Il TOKEN è ora letto da os.environ.get('TELEGRAM_TOKEN')
     application = Application.builder().token(TOKEN).build()
     
     # Registra i comandi
@@ -559,10 +545,10 @@ def main() -> None:
     application.add_handler(CommandHandler("ferma_job", ferma_job))
     application.add_handler(CommandHandler("help", help_admin))
     
-    # Handler per i pulsanti
+    # Handler per i pulsanti inline
     application.add_handler(CallbackQueryHandler(button_handler))
     
-    # Handler per il pulsante "Apri Menu"
+    # Handler per il pulsante "Apri Menu" (dalla ReplyKeyboard)
     application.add_handler(MessageHandler(
         filters.Regex("^📋 Apri Menu BasilicataGo$"), 
         handle_menu_button
@@ -595,4 +581,6 @@ def main() -> None:
 
 
 if __name__ == '__main__':
+    # Ricorda: se esegui questo script in locale, devi TERMINARE l'esecuzione
+    # prima di fare il deploy su Railway, altrimenti avrai messaggi doppi!
     main()
